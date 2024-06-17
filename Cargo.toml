@@ -1,0 +1,11 @@
+[package]
+name = "datagather"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = "*"
+serde = "*"
+serde_json = "*"
+tokio = { version = "*", features = ["full"] }
+sqlx = { version = "*", features = [ "runtime-tokio", "tls-native-tls" ] }
