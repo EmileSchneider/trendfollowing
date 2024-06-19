@@ -1,12 +1,16 @@
+use chrono::Local;
+use dotenv::dotenv;
 use reqwest;
 
 pub mod binance;
+pub mod database;
 
-async fn get_klines(symbol: &str, limit: i32) -> Result<Vec<Kline>, reqwest::Error> {
-    let res = reqwest::get(format!(
-        "https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval=1d&limit={limit}"
-    ))
-    .await?;
+use database::setup_database;
+
+async fn get_klines(symbol: &str, limit: i32, end_time: i64) -> Result<Vec<Kline>, reqwest::Error> {
+    let url = format!("https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval=1d&limit={limit}&endTime={end_time}");
+    println!("{}", url);
+    let res = reqwest::get(url).await?;
 
     let content = &res.text().await;
 
@@ -56,12 +60,12 @@ async fn get_klines(symbol: &str, limit: i32) -> Result<Vec<Kline>, reqwest::Err
 }
 
 #[derive(Debug)]
-struct Perpetual {
+pub struct Perpetual {
     symbol: String,
 }
 
-#[derive(Debug)]
-struct Kline {
+#[derive(Debug, Clone)]
+pub struct Kline {
     opentime: i64,
     open: String,
     high: String,
@@ -72,11 +76,10 @@ struct Kline {
 
 async fn get_active_perps() -> Result<Vec<Perpetual>, reqwest::Error> {
     let res = reqwest::get("https://fapi.binance.com/fapi/v1/exchangeInfo").await?;
-
     let content = &res.text().await.expect("");
-
     let parsed: serde_json::Value =
         serde_json::from_str(content).expect("Could not parse the json");
+
     match parsed {
         serde_json::Value::Object(obj) => {
             let symbols = obj
@@ -125,14 +128,82 @@ async fn get_active_perps() -> Result<Vec<Perpetual>, reqwest::Error> {
         _ => Ok(vec![]),
     }
 }
-#[tokio::main]
-async fn main() -> Result<(), reqwest::Error> {
-    let active_perps = get_active_perps().await?;
 
-    if active_perps.len() > 0 {
-        println!("{:?}", &active_perps[0].symbol);
-        let klines = get_klines(&active_perps[0].symbol, 1).await;
-        println!("{:?}", klines);
+async fn scrape_all_klines(symbol: &str) -> Vec<Kline> {
+    let mut all_klines: Vec<Kline> = vec![];
+    let mut running: bool = true;
+    let mut start_time: i64 = Local::now().timestamp() * 1000;
+
+    while running {
+        let res = get_klines(symbol, 500, start_time).await;
+        match res {
+            Ok(res) => {
+                if res.first().expect("Res has not first").opentime == start_time {
+                    running = false;
+                } else {
+                    all_klines.append(&mut res.clone().split_last().unwrap().1.to_vec());
+                    all_klines.sort_by(|a, b| a.opentime.partial_cmp(&b.opentime).unwrap());
+                    println!(
+                        "FIRST: {}\tLAST:{}\tSTARTTIME: {}",
+                        res.first().expect("").opentime,
+                        res.last().expect("").opentime,
+                        start_time
+                    );
+                    start_time = res[0].opentime;
+                }
+            }
+            Err(_) => {
+                eprintln!("Something went wrong!");
+                running = false;
+            }
+        }
     }
-    Ok(())
+
+    all_klines
+}
+#[tokio::main]
+async fn main() {
+    // let active_perps = get_active_perps().await?;
+
+    // if active_perps.len() > 0 {
+    //     println!("{:?}", &active_perps[0].symbol);
+    //     let all_klines = scrape_all_klines("BTCUSDT").await;
+    //     println!(
+    //         "LENGTH:{}\t{:?}",
+    //         all_klines.len(),
+    //         all_klines.first().expect("No first element")
+    //     );
+    //     for i in 0..(all_klines.len() - 1) {
+    //         if all_klines[i].opentime == all_klines[i + 1].opentime {
+    //             println!("Double at {}", all_klines[i].opentime);
+    //         }
+    //     }
+    // }
+    // Ok(())
+    dotenv().ok();
+    let db = setup_database().await;
+
+    // let active_perps = get_active_perps().await;
+    // match active_perps {
+    //     Ok(perps) => {
+    //         let _ = db.insert_perpetual_futures(perps).await;
+    //         println!("done")
+    //     }
+    //     Err(e) => println!("{}", e),
+    // }
+
+    let perps = db
+        .get_all_perpetual_futures()
+        .await
+        .expect("Couldn't get the perps from the database");
+
+    for perp in perps {
+        println!("{}", perp.symbol);
+        let all_klines = scrape_all_klines(&perp.symbol).await;
+        let res = db.insert_daily_klines(&perp.symbol, all_klines).await;
+        match res {
+            Ok(_) => println!("Insert klines for {}", &perp.symbol),
+            Err(e) => println!("Something went wrong for {}\tERROR:{}", &perp.symbol, e),
+        }
+    }
 }
