@@ -12,7 +12,7 @@ A trend signal is a scalar forecast of "how strong" a trend is. We will scale an
 *** Volatility Target
 Our entire enterprise will aim to achieve a certain annual portfolio volatility (standard deviation of returns). This isn't the returns of the portfolio, but how much our
 AUM will wiggle over the year.
-** TODO
+** To be done:
 - implement a backtesting system
   - universe selection
   - signal generation
