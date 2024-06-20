@@ -11,3 +11,12 @@ tokio = { version = "*", features = ["full"] }
 sqlx = { version = "*", features = [ "runtime-tokio", "tls-native-tls", "postgres" ] }
 chrono = "*"
 dotenv = "*"
+thiserror = "1.0"
+
+[[bin]]
+name = "main_app"
+path = "src/main.rs"
+
+[[bin]]
+name = "data_updater"
+path = "src/updater.rs"
