@@ -1,0 +1,2 @@
+* A Crypto Trendfollowing System
+This is (going to be) an implementation of a complete, systematic, fully automated, trend following system for cryptocurrencies. 
