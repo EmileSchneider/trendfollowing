@@ -1,3 +1,4 @@
+use gloo_net::http::Request;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
@@ -22,10 +23,48 @@ fn Counter(CounterProps { multiplier }: &CounterProps) -> Html {
     }
 }
 
+#[function_component(Table)]
+fn table() -> Html {
+    let perps = use_state(|| vec![]);
+
+    {
+        let perps = perps.clone();
+        use_effect_with((), move |_| {
+            let perps = perps.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let fetched_perps: Vec<String> = Request::get("http://127.0.0.1:8080/")
+                    .send()
+                    .await
+                    .unwrap()
+                    .json()
+                    .await
+                    .unwrap();
+                perps.set(fetched_perps);
+            });
+            || ()
+        });
+    }
+
+    html! {
+    <div>
+        <p class="text-white text-sm">{perps.len()}</p>
+        <div class="h-96 overflow-auto">
+    {
+        perps.iter().map(|perp| {
+        html! {
+            <div class="text-white text-xl">{perp}</div>
+        }
+            }).collect::<Html>()
+    }
+        </div>
+        </div>
+    }
+}
+
 #[function_component(Header)]
 fn header() -> Html {
     html! {
-    <header class="bg-blue-700 text-white sticky top-0 z-10">
+    <header class="border-solid border border-t-0 border-violet-950 text-white sticky top-0 z-10 w-1/2 rounded-b-lg bg-opacity-0 bg-gradient-to-b from-indigo-900">
         <section class="max-w-4xl mx-auto p-4 flex justify-between items-center">
             <h1 class="text-3xl font-medium">{"💸 Trendfollowing"}</h1>
             <div>
@@ -46,36 +85,41 @@ fn header() -> Html {
 #[function_component(Main)]
 fn main() -> Html {
     html! {
-    <main class="max-4-wxl mx-auto grid place-content-center">
-        <div class="w-96 h-8 bg-gray-100 border border-zinc-400 rounded-[15px] grid place-content-center text-slate-900 hover:bg-gray-200 hover:shadow-lg hover:shadow-inner">
-            {"ASDF"}
+    <main class="max-4-wxl mx-auto pl-32 pt-32">
+        <div class="grid grid-cols-2">
+        <div>
+            <h1 class="text-8xl text-white font-black">{"The safest way"}</h1>
+            <h1 class="text-8xl text-white font-light">{"to invest in crypto"}</h1>
         </div>
-        <FunLogo />
+        <div class="grid w-full grid place-content-center">
+            <span class="text-white font-black text-9xl">{"🚀"}</span>
+        </div>
+        </div>
+    <Table />
     </main>
     }
 }
 #[function_component(FunLogo)]
 fn fun_logo() -> Html {
     html! {
-    <div class="min-h-screen grid place-content-center">
         <div class="bg-emerald-500 w-52 h-52 rounded-full shadow-2xl grid place-content-center">
             <div class="bg-teal-200 w-32 h-32 rounded-full shadow-2xl grid place-content-center">
-                <div class="bg-red-500 hover:bg-blue-500 hover:blur-lg w-16 h-16 rounded-full shadow-2xl">
+                <div class="bg-red-500 hover:blur-lg w-16 h-16 rounded-full shadow-2xl">
                 </div>
             </div>
         </div>
-    </div>
+
     }
 }
 #[function_component]
 fn MainPage() -> Html {
     html! {
-    <body class="min-h-screen bg-slate-50 dark:bg-zinc-100 dark:text-white">
-            <Header/>
-        <Main />
-
+    <body class="min-h-screen absolute inset-0 -z-10 h-full w-full  [background:radial-gradient(125%_125%_at_50%_10%,#000_40%,#63e_100%)]">
+        <div class="min-w-screen full flex justify-center">
+            <Header />
+        </div>
+    <Main />
     </body>
-
     }
 }
 

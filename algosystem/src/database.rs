@@ -3,6 +3,7 @@ use std::process::exit;
 
 use crate::common::{Kline, Perpetual};
 
+#[derive(Clone)]
 pub struct Db {
     pool: PgPool,
 }

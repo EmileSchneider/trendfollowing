@@ -12,6 +12,8 @@ sqlx = { version = "*", features = [ "runtime-tokio", "tls-native-tls", "postgre
 chrono = "*"
 dotenv = "*"
 thiserror = "1.0"
+actix-web = "4"
+actix-cors = "0.7.0"
 
 [[bin]]
 name = "main_app"
@@ -20,3 +22,7 @@ path = "src/main.rs"
 [[bin]]
 name = "data_updater"
 path = "src/updater.rs"
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
