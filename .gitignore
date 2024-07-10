@@ -1,1 +1,6 @@
-/target
+algosystem/.#.env
+algosystem/target/
+webui/target/
+research/.venv/
+research/.vscode/
+research/.ipynb_checkpoints/
